@@ -1,2 +1,2 @@
-# Cuis-Smalltalk-CronDeamon
+# Cuis-Smalltalk-CronDaemon
 Provides something similar to cron daemon to run inside Cuis Smalltalk
