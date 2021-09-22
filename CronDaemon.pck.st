@@ -1,6 +1,6 @@
-'From Cuis 5.0 [latest update: #4878] on 22 September 2021 at 11:49:53 pm'!
+'From Cuis 5.0 [latest update: #4878] on 23 September 2021 at 12:16:10 am'!
 'Description '!
-!provides: 'CronDaemon' 1 14!
+!provides: 'CronDaemon' 1 15!
 SystemOrganization addCategory: #CronDaemon!
 
 
@@ -46,26 +46,13 @@ CronUnitEvery class
 
 
 !CronDaemon commentStamp: '<historical>' prior: 0!
-This obejct mirrors the crond daemon in Unix systems. When time passes it check 
+This obejct mirrors the crond daemon in Unix systems. When time passes it checks 
 if any instantiated CronUnit needs to be run.
-. It is a singleton class. There will be only one CronDaemon running on you SmalltalkImage.
----- instance variable ----- 
-. updateTime. TimeInterval CronDaemon will wait before performing another check.
+. It is a singleton class. 
+. There will be only one CronDaemon running on your SmalltalkImage and it is
+  CronDaemon default.
+. See example in the CronDaemon#README
 
------------ Use Example -------------------
-"Create the CronDaemon which wakes up every 2 seconds to check what units has to be run"
-CronDaemon new: (Duration seconds: 2).
-" . the CronDaemon is created in disabled state, to make it work you must enable it. "
-CronDaemon default enable. 
-" . You may want to see when the CronDaemon wakes up and check who has to be run."
-CronDaemon default transcriptLogQ: true. 
-
-
-. Create a a few units to be run every time a time Duration elapses
-cu1 _ CronUnit runEvery: (Duration seconds: 10) name: 'test 1' do: [ Transcript log: 'runned cron unit 1 ' ].   
-cu2 _ CronUnit runEvery: (Duration seconds: 60) name: 'test 2' do: [ Transcript log: 'runned cron unit 2 ' ].    
-
-------------------------------------------------
 
 
 
@@ -85,11 +72,11 @@ name
 	^ name 
 	! !
 
-!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 23:13:50'!
+!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 23:55:50'!
 printOn: aStream
         aStream 
                 nextPutAll: self class name;
-                nextPut: $-;
+                nextPutAll: ' - ';
                 nextPutAll: self name.  ! !
 
 !CronDaemon methodsFor: 'initialization' stamp: 'NM 9/22/2021 11:06:52'!
@@ -118,9 +105,9 @@ initialize: aDuration
 	Default _ self
 ! !
 
-!CronDaemon methodsFor: 'README' stamp: 'NM 9/22/2021 16:19:30'!
+!CronDaemon methodsFor: 'README' stamp: 'NM 9/23/2021 00:13:51'!
 README
-	|cu1|
+	|cu1 cu2|
 	self disableCode: [
 		
 ". Create the CronDaemon which wakes up every 2 seconds to check what units has to be run
@@ -136,10 +123,28 @@ CronDaemon default transcriptLogQ: true.
 cu1 _ CronUnitEvery new: (Duration seconds: 3) name: 'test unit 1' 
 				    do: [ Transcript log: 'running unit 1' ] .
 		
+cu2 _ CronUnitEvery new: (Duration seconds: 12) name: 'test unit 2' 
+				 do: [ Transcript log: 'running unit 2' ] .
+
+CronDaemon default listAllUnits . 
+
+". disable / enable a CronUnit"
+cu1 disable. 
+cu1 enable.
+
+". disable / enable the CronDaemon "
+CronDaemon default disable. 
+CronDaemon default enable. 
+
+". disable/enable logging daemon runs in Transcript " 
+CronDaemon default transcriptLogQ: false. 
+CronDaemon default transcriptLogQ: true. 
+
+
 
 
 ". this is only to avoid the editor telliing me fake variables are useless, ignore it. "		
-^ {cu1}		
+^ {cu1. cu2}		
 		
 		
 		
@@ -242,6 +247,13 @@ dispatcher
 		cla allInstancesDo: [ :unit | unit tryToRun ] ] .
 	! !
 
+!CronDaemon class methodsFor: 'testing' stamp: 'NM 9/23/2021 00:01:18'!
+isValidUnitName: aString
+	". check if aString can be a valid unit name, that is, there is not other CronUnit with that name. "
+	CronUnit allSubclasses do: [ :cla |
+		cla allInstancesDo: [ :inst | (inst name = aString) ifTrue: [ ^ false ] ] ].
+	^ true! !
+
 !CronDaemon class methodsFor: 'instance creation' stamp: 'NM 9/21/2021 18:10:12'!
 default
 	^ Default 
@@ -323,6 +335,16 @@ enable
 status
 	^ (isActive = true) ifTrue: [ 'enabled' ]  ifFalse: [ 'disabled' ]  ! !
 
+!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 12:13:50'!
+initialize: aDuration name: aString do: aBlock 
+	action _ aBlock.
+	runEvery _ aDuration .
+	lastRun _ nil. 
+	isActive _ true.
+	name _ aString.
+	initTime _ DateAndTime now.
+	^ self ! !
+
 !CronUnitEvery methodsFor: 'running' stamp: 'NM 9/22/2021 10:54:13'!
 isTimeToRun
 	". datermine if it is time for this unit to be run, return a boolean. "
@@ -344,16 +366,7 @@ tryToRun
 	
 	 ! !
 
-!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 12:13:50'!
-initialize: aDuration name: aString do: aBlock 
-	action _ aBlock.
-	runEvery _ aDuration .
-	lastRun _ nil. 
-	isActive _ true.
-	name _ aString.
-	initTime _ DateAndTime now.
-	^ self ! !
-
-!CronUnitEvery class methodsFor: 'instance creation' stamp: 'NM 9/22/2021 10:45:55'!
+!CronUnitEvery class methodsFor: 'instance creation' stamp: 'NM 9/23/2021 00:07:20'!
 new: aDuration name: aString do: aBlock
+	self assert: [ CronDaemon isValidUnitName: aString ] description: 'CronUnit name must be not in use.' .
 	^ super new initialize: aDuration name: aString do: aBlock! !
