@@ -1,6 +1,6 @@
-'From Cuis 5.0 [latest update: #4871] on 22 September 2021 at 4:19:39 pm'!
+'From Cuis 5.0 [latest update: #4878] on 22 September 2021 at 11:49:53 pm'!
 'Description '!
-!provides: 'CronDaemon' 1 12!
+!provides: 'CronDaemon' 1 14!
 SystemOrganization addCategory: #CronDaemon!
 
 
@@ -80,11 +80,17 @@ cu2 _ CronUnit runEvery: (Duration seconds: 60) name: 'test 2' do: [ Transcript 
 . A CronUnit that is runnable every time a Duration elapses. For example, we want to run it every hour.
 !
 
-!CronUnit methodsFor: 'printing' stamp: 'NM 9/22/2021 15:45:00'!
-printOn: arg1
-	|str|
-	str _ ((self class name) , '-', self name).
-	arg1 nextPutAll: str.! !
+!CronUnit methodsFor: 'accessing' stamp: 'NM 9/22/2021 23:12:18'!
+name
+	^ name 
+	! !
+
+!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 23:13:50'!
+printOn: aStream
+        aStream 
+                nextPutAll: self class name;
+                nextPut: $-;
+                nextPutAll: self name.  ! !
 
 !CronDaemon methodsFor: 'initialization' stamp: 'NM 9/22/2021 11:06:52'!
 initialize
@@ -313,30 +319,9 @@ disable
 enable
 	isActive _ true.! !
 
-!CronUnit methodsFor: 'status' stamp: 'NM 9/21/2021 19:47:09'!
-isTimeToRun
-	". datermine if it is time for this unit to be run, return a boolean. "
-	|now|
-	"never runned units are always ready for a first  run."
-	(lastRun isNil) ifTrue: [  ^ true ].  
-	now _ DateAndTime now.
-	((now - lastRun) >= runEvery) ifTrue: [ ^ true ].
-	^ false 
-	! !
-
 !CronUnit methodsFor: 'status' stamp: 'NM 9/22/2021 12:20:06'!
 status
 	^ (isActive = true) ifTrue: [ 'enabled' ]  ifFalse: [ 'disabled' ]  ! !
-
-!CronUnit methodsFor: 'status' stamp: 'NM 9/21/2021 19:40:17'!
-tryToRun
-	". try to run this unit if its time has come"
-	(self isTimeToRun) ifTrue: [  
-		action value. 
-		lastRun _ DateAndTime now.
-		] .
-	
-	 ! !
 
 !CronUnitEvery methodsFor: 'running' stamp: 'NM 9/22/2021 10:54:13'!
 isTimeToRun
