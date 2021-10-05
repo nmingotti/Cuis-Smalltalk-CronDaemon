@@ -1,6 +1,6 @@
-'From Cuis 5.0 [latest update: #4878] on 5 October 2021 at 4:35:33 pm'!
+'From Cuis 5.0 [latest update: #4878] on 5 October 2021 at 5:00:40 pm'!
 'Description '!
-!provides: 'CronDaemon' 1 18!
+!provides: 'CronDaemon' 1 19!
 SystemOrganization addCategory: #CronDaemon!
 
 
@@ -106,7 +106,7 @@ initialize: aDuration
 	Default _ self
 ! !
 
-!CronDaemon methodsFor: 'README' stamp: 'NM 9/29/2021 12:16:58'!
+!CronDaemon methodsFor: 'README' stamp: 'NM 10/5/2021 16:47:30'!
 README
 	|cu1 cu2|
 	self disableCode: [
@@ -119,17 +119,21 @@ CronDaemon new: (Duration seconds: 2).
 CronDaemon default enable. 
 " . You may want to see when the CronDaemon wakes up and check who has to be run."
 CronDaemon default transcriptLogQ: true. 	
-		
-				
-cu1 _ CronUnitEvery new: (Duration seconds: 3) name: 'test unit 1' 
-				    do: [ Transcript log: 'running unit 1' ] .
-		
-cu2 _ CronUnitEvery new: (Duration seconds: 12) name: 'test unit 2' 
-				 do: [ Transcript log: 'running unit 2' ] .
 
-CronDaemon  listAllUnits . 
 
-". disable / enable a CronUnit"
+cu1 _ CronUnitEvery new: (Duration seconds: 5) name: 'test-1' 
+	              do: [  Transcript log: '---> run test-1' . ] .
+CronDaemon default addUnit: cu1.
+
+cu2 _ CronUnitEvery new: (Duration seconds: 10) name: 'test-2' 
+	              do: [  Transcript log: '---> run test-2' . ] .
+CronDaemon default addUnit: cu2.
+		
+". see registered units, see also other methods in protocol: 'manageUnits'' "
+CronDaemon default listUnits .			
+
+
+". disable / enable a CronUnit. "
 cu1 disable. 
 cu1 enable.
 
@@ -140,8 +144,6 @@ CronDaemon default enable.
 ". disable/enable logging daemon runs in Transcript " 
 CronDaemon default transcriptLogQ: false. 
 CronDaemon default transcriptLogQ: true. 
-
-
 
 
 ". this is only to avoid the editor telliing me fake variables are useless, ignore it. "		
@@ -272,27 +274,9 @@ dispatcher
 		cla allInstancesDo: [ :unit | unit tryToRun ] ] . "
 	! !
 
-!CronDaemon class methodsFor: 'testing' stamp: 'NM 9/23/2021 00:01:18'!
-isValidUnitName: aString
-	". check if aString can be a valid unit name, that is, there is not other CronUnit with that name. "
-	CronUnit allSubclasses do: [ :cla |
-		cla allInstancesDo: [ :inst | (inst name = aString) ifTrue: [ ^ false ] ] ].
-	^ true! !
-
 !CronDaemon class methodsFor: 'instance creation' stamp: 'NM 9/21/2021 18:10:12'!
 default
 	^ Default 
-	! !
-
-!CronDaemon class methodsFor: 'instance creation' stamp: 'NM 9/29/2021 12:16:19'!
-listAllUnits
-	". return a list of all CronUnit instances.  "
-	|out|
-	out _ OrderedCollection new. 
-	CronUnit allSubclassesDo: [ :cla | 
-		cla allInstancesDo: [ :inst | out add: inst ] ] .
-	^ out 
-
 	! !
 
 !CronDaemon class methodsFor: 'instance creation' stamp: 'NM 9/21/2021 17:36:00'!
