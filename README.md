@@ -13,10 +13,8 @@
 * `CronDaemon default` can be *enabled* or *disabled*, by default it is created in **disabled** state. 
 * **CronUnit** instances can be *enabled* or *disabled*, by default they are created in **enabled** state.
 * Differently from Unix *cron*, *CronDaemon* isn't stateless. It remembers last time a CronUnit has been run, for example.
-* **CronDaemon** does not store in itself the instances of **CrontUnit**, you are supposed to store them
-  into your own code instance variables. **Example**, suppose you have a class *FooClass* which would like to run 
-  a method *fooMeth* every 1 hour. What you need to do is define an instance variable *fooTimer* in your class *FooClass*
-  and store in the *fooTimer* the instance of a subnclass of **CrontUnit**.
+* **CronDaemon defaut**, stores in itself all the **CronUnit** that it needs to control in the instance variable *unitList*. 
+* The units are checked for runnability in the same order they are listed in the instance variable *unitList*. 
 
 ## Examples 
 
