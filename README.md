@@ -22,7 +22,7 @@
 
 * These examples are a copy of what is available in the **CronDaemon>>README**. 
 ```smalltalk 
-		
+				
 ". Create the CronDaemon which wakes up every 2 seconds to check what units has to be run
 . NOTE. 2 seconds is a very short time, it is just an example for test, you may want to put a longer time period.
 "
@@ -31,22 +31,23 @@ CronDaemon new: (Duration seconds: 2).
 CronDaemon default enable. 
 " . You may want to see when the CronDaemon wakes up and check who has to be run."
 CronDaemon default transcriptLogQ: true. 	
-		
-				
-cu1 _ CronUnitEvery new: (Duration seconds: 3) name: 'test unit 1' 
-				    do: [ Transcript log: 'running unit 1' ] .
-		
-cu2 _ CronUnitEvery new: (Duration seconds: 12) name: 'test unit 2' 
-				 do: [ Transcript log: 'running unit 2' ] .
 
-CronDaemon default listAllUnits . 
 
-". disable / enable a CronUnit"
+cu1 _ CronUnitEvery new: (Duration seconds: 5) name: 'test-1' 
+	              do: [  Transcript log: '---> run test-1' . ] .
+CronDaemon default addUnit: cu1.
+
+cu2 _ CronUnitEvery new: (Duration seconds: 10) name: 'test-2' 
+	              do: [  Transcript log: '---> run test-2' . ] .
+CronDaemon default addUnit: cu2.
+		
+". see registered units, see also other methods in protocol: 'manageUnits'' "
+CronDaemon default listUnits .			
+
+
+". disable / enable a CronUnit. "
 cu1 disable. 
 cu1 enable.
-
-". if you delete a unit it is gone, CronDaemon does not store them. "
-cu1 _ nil.       ". cu1 is gone, CronDaemon will not find it anymore, unless it has some other reference somewhere. "
 
 ". disable / enable the CronDaemon "
 CronDaemon default disable. 
@@ -55,6 +56,7 @@ CronDaemon default enable.
 ". disable/enable logging daemon runs in Transcript " 
 CronDaemon default transcriptLogQ: false. 
 CronDaemon default transcriptLogQ: true. 
+
 ```
 
 
