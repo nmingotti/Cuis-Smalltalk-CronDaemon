@@ -1,12 +1,12 @@
-'From Cuis 5.0 [latest update: #4878] on 23 September 2021 at 12:16:10 am'!
+'From Cuis 5.0 [latest update: #4878] on 5 October 2021 at 4:35:33 pm'!
 'Description '!
-!provides: 'CronDaemon' 1 15!
+!provides: 'CronDaemon' 1 18!
 SystemOrganization addCategory: #CronDaemon!
 
 
 !classDefinition: #CronDaemon category: #CronDaemon!
 Object subclass: #CronDaemon
-	instanceVariableNames: 'process updateEvery lastRun transcriptLogQ'
+	instanceVariableNames: 'process updateEvery lastRun transcriptLogQ unitList'
 	classVariableNames: 'Default'
 	poolDictionaries: ''
 	category: 'CronDaemon'!
@@ -83,7 +83,7 @@ printOn: aStream
 initialize
 	self initialize: (Duration seconds: 30) ! !
 
-!CronDaemon methodsFor: 'initialization' stamp: 'NM 9/22/2021 15:05:41'!
+!CronDaemon methodsFor: 'initialization' stamp: 'NM 10/5/2021 11:23:49'!
 initialize: aDuration
 	". if there was an existing daemon destroy it.  "
 	Default ifNotNil: [CronDaemon default destroy].
@@ -91,6 +91,7 @@ initialize: aDuration
 	". by default the CronDaemon does not log it's activity to Transcript"
 	transcriptLogQ _ false. 
 	lastRun _ DateAndTime now. 
+	unitList _ OrderedCollection new. 
 	". make a new the process, still not activate   "
 	process _     [ [true] whileTrue: [
 		(Delay forDuration: updateEvery ) wait.
@@ -105,7 +106,7 @@ initialize: aDuration
 	Default _ self
 ! !
 
-!CronDaemon methodsFor: 'README' stamp: 'NM 9/23/2021 00:13:51'!
+!CronDaemon methodsFor: 'README' stamp: 'NM 9/29/2021 12:16:58'!
 README
 	|cu1 cu2|
 	self disableCode: [
@@ -126,7 +127,7 @@ cu1 _ CronUnitEvery new: (Duration seconds: 3) name: 'test unit 1'
 cu2 _ CronUnitEvery new: (Duration seconds: 12) name: 'test unit 2' 
 				 do: [ Transcript log: 'running unit 2' ] .
 
-CronDaemon default listAllUnits . 
+CronDaemon  listAllUnits . 
 
 ". disable / enable a CronUnit"
 cu1 disable. 
@@ -169,17 +170,6 @@ enable
 		].
  	! !
 
-!CronDaemon methodsFor: 'inspecting' stamp: 'NM 9/22/2021 15:48:31'!
-listAllUnits
-	". return a list of all CronUnit instances.  "
-	|out|
-	out _ OrderedCollection new. 
-	CronUnit allSubclassesDo: [ :cla | 
-		cla allInstancesDo: [ :inst | out add: inst ] ] .
-	^ out 
-
-	! !
-
 !CronDaemon methodsFor: 'inspecting' stamp: 'NM 9/22/2021 11:47:59'!
 status
 	^ (self process isSuspended) ifTrue: [ 'disabled' ] ifFalse: [ 'enabled' ].
@@ -221,6 +211,18 @@ transcriptLogQ: anObject
 
 	transcriptLogQ _ anObject! !
 
+!CronDaemon methodsFor: 'accessing' stamp: 'NM 10/5/2021 11:23:21'!
+unitList
+	"Answer the value of unitList"
+
+	^ unitList! !
+
+!CronDaemon methodsFor: 'accessing' stamp: 'NM 10/5/2021 11:23:21'!
+unitList: anObject
+	"Set the value of unitList"
+
+	unitList _ anObject! !
+
 !CronDaemon methodsFor: 'accessing' stamp: 'NM 9/22/2021 11:30:52'!
 updateEvery
 	"Answer the value of updateEvery"
@@ -240,11 +242,34 @@ destroy
 	CronDaemon default process terminate.
 	Default _ nil .! !
 
-!CronDaemon methodsFor: 'work' stamp: 'NM 9/22/2021 15:52:57'!
+!CronDaemon methodsFor: 'manageUnits' stamp: 'NM 10/5/2021 16:14:34'!
+addUnit: aCronUnit
+	". add a cronUnit under the daemon to be started when needed ."
+	unitList add: aCronUnit .! !
+
+!CronDaemon methodsFor: 'manageUnits' stamp: 'NM 10/5/2021 16:15:44'!
+listUnits
+	"list know units under CronDeamon control "
+	^ unitList ! !
+
+!CronDaemon methodsFor: 'manageUnits' stamp: 'NM 10/5/2021 16:24:45'!
+removeAllUnits
+	". remove all units from CronD control "
+	unitList _ OrderedCollection new. ! !
+
+!CronDaemon methodsFor: 'manageUnits' stamp: 'NM 10/5/2021 16:22:02'!
+removeUnitAt: anIndex
+	". Remove a unit from Crond control ."
+	unitList removeAt: anIndex .! !
+
+!CronDaemon methodsFor: 'work' stamp: 'NM 10/5/2021 11:25:42'!
 dispatcher
 	". visit all instances of CronUnit and if time has come, run their associated code. "
-	CronUnit allSubclassesDo: [ :cla | 
-		cla allInstancesDo: [ :unit | unit tryToRun ] ] .
+	unitList do: [ :unit | unit tryToRun ].
+	
+	" . previous version which had not the variable 'unitList' . "
+	"CronUnit allSubclassesDo: [ :cla | 
+		cla allInstancesDo: [ :unit | unit tryToRun ] ] . "
 	! !
 
 !CronDaemon class methodsFor: 'testing' stamp: 'NM 9/23/2021 00:01:18'!
@@ -257,6 +282,17 @@ isValidUnitName: aString
 !CronDaemon class methodsFor: 'instance creation' stamp: 'NM 9/21/2021 18:10:12'!
 default
 	^ Default 
+	! !
+
+!CronDaemon class methodsFor: 'instance creation' stamp: 'NM 9/29/2021 12:16:19'!
+listAllUnits
+	". return a list of all CronUnit instances.  "
+	|out|
+	out _ OrderedCollection new. 
+	CronUnit allSubclassesDo: [ :cla | 
+		cla allInstancesDo: [ :inst | out add: inst ] ] .
+	^ out 
+
 	! !
 
 !CronDaemon class methodsFor: 'instance creation' stamp: 'NM 9/21/2021 17:36:00'!
@@ -366,7 +402,9 @@ tryToRun
 	
 	 ! !
 
-!CronUnitEvery class methodsFor: 'instance creation' stamp: 'NM 9/23/2021 00:07:20'!
+!CronUnitEvery class methodsFor: 'instance creation' stamp: 'NM 10/5/2021 16:11:09'!
 new: aDuration name: aString do: aBlock
-	self assert: [ CronDaemon isValidUnitName: aString ] description: 'CronUnit name must be not in use.' .
-	^ super new initialize: aDuration name: aString do: aBlock! !
+        ". Questo controllo non e' piu' necessario perche' ora le units vegono inserite 
+             in una lista in CronDaemon per essere attivate . "
+	"self assert: [ CronDaemon isValidUnitName: aString ] description: 'Errore, cron unit con questo nome in uso' ."
+	^ self basicNew initialize: aDuration name: aString do: aBlock! !
