@@ -1,6 +1,6 @@
-'From Cuis 5.0 [latest update: #4878] on 5 October 2021 at 5:00:40 pm'!
+'From Cuis 5.0 [latest update: #4908] on 14 October 2021 at 4:52:22 pm'!
 'Description '!
-!provides: 'CronDaemon' 1 19!
+!provides: 'CronDaemon' 1 22!
 SystemOrganization addCategory: #CronDaemon!
 
 
@@ -26,7 +26,7 @@ CronUnit class
 
 !classDefinition: #CronUnitAt category: #CronDaemon!
 CronUnit subclass: #CronUnitAt
-	instanceVariableNames: 'runAt'
+	instanceVariableNames: 'runAt delta'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CronDaemon'!
@@ -42,6 +42,16 @@ CronUnit subclass: #CronUnitEvery
 	category: 'CronDaemon'!
 !classDefinition: 'CronUnitEvery class' category: #CronDaemon!
 CronUnitEvery class
+	instanceVariableNames: ''!
+
+!classDefinition: #CronUnitOn category: #CronDaemon!
+CronUnit subclass: #CronUnitOn
+	instanceVariableNames: 'runOn delta'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CronDaemon'!
+!classDefinition: 'CronUnitOn class' category: #CronDaemon!
+CronUnitOn class
 	instanceVariableNames: ''!
 
 
@@ -67,12 +77,31 @@ if any instantiated CronUnit needs to be run.
 . A CronUnit that is runnable every time a Duration elapses. For example, we want to run it every hour.
 !
 
+!CronUnitOn commentStamp: '<historical>' prior: 0!
+. A CronUnit is runnable at specific times, dates, days.
+. It can be recurrent or one shot
+!
+
 !CronUnit methodsFor: 'accessing' stamp: 'NM 9/22/2021 23:12:18'!
 name
 	^ name 
 	! !
 
-!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 23:55:50'!
+!CronUnitAt methodsFor: 'printing' stamp: 'NM 10/14/2021 15:33:54'!
+printOn: aStream
+        aStream 
+                nextPutAll: self class name;
+                nextPutAll: ' - ';
+                nextPutAll: self name.  ! !
+
+!CronUnitEvery methodsFor: 'printing' stamp: 'NM 9/22/2021 23:55:50'!
+printOn: aStream
+        aStream 
+                nextPutAll: self class name;
+                nextPutAll: ' - ';
+                nextPutAll: self name.  ! !
+
+!CronUnitOn methodsFor: 'printing' stamp: 'NM 10/14/2021 16:17:29'!
 printOn: aStream
         aStream 
                 nextPutAll: self class name;
@@ -355,6 +384,51 @@ enable
 status
 	^ (isActive = true) ifTrue: [ 'enabled' ]  ifFalse: [ 'disabled' ]  ! !
 
+!CronUnitAt methodsFor: 'running' stamp: 'NM 10/14/2021 15:33:38'!
+tryToRun
+	". run this unit if its time has come and it is active"
+	((self isActive) and: [self isTimeToRun]) ifTrue: [  
+		action value. 
+		lastRun _ DateAndTime now.
+		] .
+	! !
+
+!CronUnitAt methodsFor: 'initialization' stamp: 'NM 10/14/2021 15:40:45'!
+initializeAtTime: aStringTime name: aStringName do: aBlock
+	action _ aBlock.
+	runAt _ Time fromString: aStringTime.
+	delta _ Duration minutes: 1.
+	lastRun _ nil. 
+	isActive _ true.
+	name _ aStringName.
+	initTime _ DateAndTime now.
+	^ self ! !
+
+!CronUnitAt methodsFor: 'initialization' stamp: 'NM 10/14/2021 16:24:04'!
+isTimeToRun
+	". datermine if it is time for this unit to be run, return a boolean. "
+	|now diff|
+	"per never runned units"
+	(lastRun isNil) ifTrue: [
+		diff _   ((Time now) - runAt) .
+		". siamo poco dopo l'ora X,  poco significa 1 delta " 
+		^ ((diff > (Duration seconds: 1)) and: [ (diff < delta) ]) 
+	].  
+	" . se la unit ha girato almeno una volta " 
+	" . se il tempo dalla ultima volta che ha girato e' < 2*delta allora non e' ora di considerarla "
+	now _ DateAndTime now.
+	((now - lastRun) < (delta * 2)) ifTrue: [ ^ false ]  ifFalse: [
+		diff _   ((Time now) - runAt) .
+		". siamo poco dopo l'ora X,  poco significa 1 delta " 
+		^ ((diff > (Duration seconds: 1)) and: [ (diff < delta) ]) 	
+		].
+	! !
+
+!CronUnitAt class methodsFor: 'as yet unclassified' stamp: 'NM 10/14/2021 15:13:02'!
+newAtTime: aStringTime name: aStringName do: aBlock
+	". Example of aStringTime: '15:26'  ' "
+	^ self basicNew initializeAtTime: aStringTime name: aStringName  do: aBlock . ! !
+
 !CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 12:13:50'!
 initialize: aDuration name: aString do: aBlock 
 	action _ aBlock.
@@ -392,3 +466,44 @@ new: aDuration name: aString do: aBlock
              in una lista in CronDaemon per essere attivate . "
 	"self assert: [ CronDaemon isValidUnitName: aString ] description: 'Errore, cron unit con questo nome in uso' ."
 	^ self basicNew initialize: aDuration name: aString do: aBlock! !
+
+!CronUnitOn methodsFor: 'running' stamp: 'NM 10/14/2021 16:17:29'!
+tryToRun
+	". run this unit if its time has come and it is active"
+	((self isActive) and: [self isTimeToRun]) ifTrue: [  
+		action value. 
+		lastRun _ DateAndTime now.
+		] .
+	! !
+
+!CronUnitOn methodsFor: 'initialization' stamp: 'NM 10/14/2021 16:31:19'!
+initializeOn: aBlockTest name: aStringName do: aBlockAction
+	action _ aBlockAction.
+	runOn _ aBlockTest .
+	delta _ Duration minutes: 1.
+	lastRun _ nil. 
+	isActive _ true.
+	name _ aStringName.
+	initTime _ DateAndTime now.
+	^ self ! !
+
+!CronUnitOn methodsFor: 'initialization' stamp: 'NM 10/14/2021 16:33:24'!
+isTimeToRun
+	". datermine if it is time for this unit to be run, return a boolean. "
+	|now |
+	"per never runned units"
+	(lastRun isNil) ifTrue: [
+		^ runOn value.
+	].  
+	" . se la unit ha girato almeno una volta " 
+	" . se il tempo dalla ultima volta che ha girato e' < 2*delta allora non e' ora di considerarla "
+	now _ DateAndTime now.
+	((now - lastRun) < (delta * 2)) ifTrue: [ ^ false ]  ifFalse: [
+		^ runOn value. 
+		].
+	! !
+
+!CronUnitOn class methodsFor: 'as yet unclassified' stamp: 'NM 10/14/2021 16:29:40'!
+newOn: aBlockTest name: aStringName do: aBlockAction
+	". Example of aStringTime: '15:26'  ' "
+	^ self basicNew initializeOn: aBlockTest name: aStringName  do: aBlockAction . ! !
