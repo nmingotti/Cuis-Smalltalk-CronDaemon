@@ -1,14 +1,21 @@
 # Cuis-Smalltalk-CronDaemon
 
 * Provides something similar to Unix **cron** daemon to run inside Cuis Smalltalk.
-* It makes possible to run a **block** every time a time Duration elapses. For example: run something every 2 hours.
+* It makes possible to run a **aBlock** every time:
+  *  a time Duration elapses. For example: run something every 2 hours. Use **CronUnitEvery**. 
+  *  wall clock displays time 'XX:YY'. Use  **CronUnitAt** .  
+  *  aBlock evaluates to true. Use **CronUnitOn** . 
+* You decide the **frequency** the CronDeamon does its checks, 30 seconds is the reccomended value. 
 
 ## How does it work
 
 * When instantiated **CronDaemon**  runs a background process, this process checks if any **CronUnit** subclass
   instance is ready to be run. If so, it runs it.
-* There are two subclasses of **CrontUnit**, namely **CronUnitEvery** (which runs a process every X time amount) and
-  **CronUnitAt** which runs at specific times&dates (this at the moment is not implemented).
+* There are three subclasses of **CrontUnit**, namely **CronUnitEvery** (which runs a process every X time amount) and
+  **CronUnitAt** which runs at specific times&dates (this at the moment is not implemented) and **CronUnitOn** which runs when
+  some aBlock evaluated to true. 
+* **CrontUnitOn** is the more versatile unit and let you do what you want. But the control well the **timeDelta** mechanism
+  to prevent multiple runs of the unit is compatible with your project.  
 * You can make only one instance of **CronDaemon** which is accessible via `CronDaemon default`.
 * `CronDaemon default` can be *enabled* or *disabled*, by default it is created in **disabled** state. 
 * **CronUnit** instances can be *enabled* or *disabled*, by default they are created in **enabled** state.
