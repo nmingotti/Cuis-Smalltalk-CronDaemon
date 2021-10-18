@@ -11,10 +11,10 @@
 
 * When instantiated **CronDaemon**  runs a background process, this process checks if any **CronUnit** subclass
   instance is ready to be run. If so, it runs it.
-* There are three subclasses of **CrontUnit**, namely **CronUnitEvery** (which runs a process every X time amount) and
-  **CronUnitAt** which runs at specific times&dates (this at the moment is not implemented) and **CronUnitOn** which runs when
-  some aBlock evaluated to true. 
-* **CrontUnitOn** is the more versatile unit and let you do what you want. But the control well the **timeDelta** mechanism
+* There are three subclasses of **CrontUnit**: **CronUnitEvery** (which runs a process every X time amount) and
+  **CronUnitAt** which runs at specific times&dates (this at the moment takes only HH:MM input format) and **CronUnitOn** which runs when
+  some aBlock evaluates to true. 
+* **CrontUnitOn** is the most versatile unit and let you do what you want. But you must check the *timeDelta* mechanism
   to prevent multiple runs of the unit is compatible with your project.  
 * You can make only one instance of **CronDaemon** which is accessible via `CronDaemon default`.
 * `CronDaemon default` can be *enabled* or *disabled*, by default it is created in **disabled** state. 
@@ -22,6 +22,7 @@
 * Differently from Unix *cron*, *CronDaemon* isn't stateless. It remembers last time a CronUnit has been run, for example.
 * **CronDaemon defaut**, stores in itself all the **CronUnit** that it needs to control in the instance variable *unitList*. 
 * The units are checked for runnability in the same order they are listed in the instance variable *unitList*. 
+  That is, if at some time 2 or more units are ready to run you can always say who will run first.
 
 ## Examples 
 
@@ -65,8 +66,5 @@ CronDaemon default transcriptLogQ: true.
 ```
 
 
-
-## TODO 
-* Run something at specifics time and/or date, that is, implement **CronUnitAt**.
 
 
