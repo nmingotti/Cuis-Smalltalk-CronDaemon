@@ -6,6 +6,11 @@
   *  wall clock displays time 'XX:YY'. Use  **CronUnitAt** .  
   *  aBlock evaluates to true. Use **CronUnitOn** . 
 * You decide the **frequency** the CronDeamon does its checks, 30 seconds is the reccomended value. 
+* **ATTENTION**. In first days of November-2021 a bug was discovered in Cuis regarding time management. Cuis at the moment of writing
+is not able to detect the timezone change happening twice per year in many countries on Daylight saving time change. 
+  * As a consequence, default `DateAndTime now` and `Time now` are not adequate to check current time values. 
+  * A dependency on external package `Cuis-Smalltalk-AskLinux` was added, providing raw time reading from Linux
+    and an indirection class `DateAndTimeHelper` which permits choosing how we want to read the time, now defaulting to `AskLinux` methods. 
 
 ## How does it work
 
