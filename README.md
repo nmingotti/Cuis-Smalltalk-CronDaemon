@@ -70,6 +70,8 @@ CronDaemon default transcriptLogQ: true.
 
 ```
 
-
+# Changelog
+* 10-nov-2021. Dependency on `AskLinux` to raw read time and date from Linux. 
+* 10-Nov-2021. Class `DateAndTimeHelper` to add an indirection level and in the future choose to read time from Cuis directly. 
 
 
