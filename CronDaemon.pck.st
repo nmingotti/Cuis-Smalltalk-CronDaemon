@@ -1,6 +1,7 @@
-'From Cuis 5.0 [latest update: #4908] on 14 October 2021 at 4:52:22 pm'!
+'From Cuis 5.0 [latest update: #4908] on 10 November 2021 at 4:46:58 pm'!
 'Description '!
-!provides: 'CronDaemon' 1 22!
+!provides: 'CronDaemon' 1 24!
+!requires: 'AskLinux' 1 6 nil!
 SystemOrganization addCategory: #CronDaemon!
 
 
@@ -54,6 +55,16 @@ CronUnit subclass: #CronUnitOn
 CronUnitOn class
 	instanceVariableNames: ''!
 
+!classDefinition: #DateAndTimeHelper category: #CronDaemon!
+Object subclass: #DateAndTimeHelper
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CronDaemon'!
+!classDefinition: 'DateAndTimeHelper class' category: #CronDaemon!
+DateAndTimeHelper class
+	instanceVariableNames: ''!
+
 
 !CronDaemon commentStamp: '<historical>' prior: 0!
 This obejct mirrors the crond daemon in Unix systems. When time passes it checks 
@@ -81,6 +92,12 @@ if any instantiated CronUnit needs to be run.
 . A CronUnit is runnable at specific times, dates, days.
 . It can be recurrent or one shot
 !
+
+!DateAndTimeHelper commentStamp: '<historical>' prior: 0!
+. This class was introduced in 10-Nov-2021 because Cuis was not able 
+to follow the correct time zone after a daylight time change. 
+. Thereforse we call the date and time through this class which permits
+to call Cuis functions or, maybe Linux services directly. !
 
 !CronUnit methodsFor: 'accessing' stamp: 'NM 9/22/2021 23:12:18'!
 name
@@ -112,20 +129,20 @@ printOn: aStream
 initialize
 	self initialize: (Duration seconds: 30) ! !
 
-!CronDaemon methodsFor: 'initialization' stamp: 'NM 10/5/2021 11:23:49'!
+!CronDaemon methodsFor: 'initialization' stamp: 'NM 11/10/2021 16:36:25'!
 initialize: aDuration
 	". if there was an existing daemon destroy it.  "
 	Default ifNotNil: [CronDaemon default destroy].
 	updateEvery _ aDuration. 
 	". by default the CronDaemon does not log it's activity to Transcript"
 	transcriptLogQ _ false. 
-	lastRun _ DateAndTime now. 
+	lastRun _ DateAndTimeHelper dateNow. 
 	unitList _ OrderedCollection new. 
 	". make a new the process, still not activate   "
 	process _     [ [true] whileTrue: [
 		(Delay forDuration: updateEvery ) wait.
 		transcriptLogQ ifTrue: [
-		       Transcript log: ('CronDaemon | dispatcher runs at: {1} {2}' format: {DateAndTime now. String lf.} ) ]. 
+		       Transcript log: ('CronDaemon | dispatcher runs at: {1} {2}' format: {DateAndTimeHelper dateNow. String lf.} ) ]. 
 		self dispatcher . 
 	]
        ] newProcess .
@@ -384,16 +401,16 @@ enable
 status
 	^ (isActive = true) ifTrue: [ 'enabled' ]  ifFalse: [ 'disabled' ]  ! !
 
-!CronUnitAt methodsFor: 'running' stamp: 'NM 10/14/2021 15:33:38'!
+!CronUnitAt methodsFor: 'running' stamp: 'NM 11/10/2021 16:30:31'!
 tryToRun
 	". run this unit if its time has come and it is active"
 	((self isActive) and: [self isTimeToRun]) ifTrue: [  
 		action value. 
-		lastRun _ DateAndTime now.
+		lastRun _ DateAndTimeHelper dateNow .
 		] .
 	! !
 
-!CronUnitAt methodsFor: 'initialization' stamp: 'NM 10/14/2021 15:40:45'!
+!CronUnitAt methodsFor: 'initialization' stamp: 'NM 11/10/2021 16:32:46'!
 initializeAtTime: aStringTime name: aStringName do: aBlock
 	action _ aBlock.
 	runAt _ Time fromString: aStringTime.
@@ -401,24 +418,24 @@ initializeAtTime: aStringTime name: aStringName do: aBlock
 	lastRun _ nil. 
 	isActive _ true.
 	name _ aStringName.
-	initTime _ DateAndTime now.
+	initTime _ DateAndTimeHelper dateNow.
 	^ self ! !
 
-!CronUnitAt methodsFor: 'initialization' stamp: 'NM 10/14/2021 16:24:04'!
+!CronUnitAt methodsFor: 'initialization' stamp: 'NM 11/10/2021 16:29:52'!
 isTimeToRun
 	". datermine if it is time for this unit to be run, return a boolean. "
 	|now diff|
 	"per never runned units"
 	(lastRun isNil) ifTrue: [
-		diff _   ((Time now) - runAt) .
+		diff _   ((DateAndTimeHelper timeNow) - runAt) .
 		". siamo poco dopo l'ora X,  poco significa 1 delta " 
 		^ ((diff > (Duration seconds: 1)) and: [ (diff < delta) ]) 
 	].  
 	" . se la unit ha girato almeno una volta " 
 	" . se il tempo dalla ultima volta che ha girato e' < 2*delta allora non e' ora di considerarla "
-	now _ DateAndTime now.
+	now _ DateAndTimeHelper dateNow. 
 	((now - lastRun) < (delta * 2)) ifTrue: [ ^ false ]  ifFalse: [
-		diff _   ((Time now) - runAt) .
+		diff _   ((DateAndTimeHelper timeNow) - runAt) .
 		". siamo poco dopo l'ora X,  poco significa 1 delta " 
 		^ ((diff > (Duration seconds: 1)) and: [ (diff < delta) ]) 	
 		].
@@ -429,33 +446,34 @@ newAtTime: aStringTime name: aStringName do: aBlock
 	". Example of aStringTime: '15:26'  ' "
 	^ self basicNew initializeAtTime: aStringTime name: aStringName  do: aBlock . ! !
 
-!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 9/22/2021 12:13:50'!
+!CronUnitEvery methodsFor: 'initialization' stamp: 'NM 11/10/2021 16:32:24'!
 initialize: aDuration name: aString do: aBlock 
 	action _ aBlock.
 	runEvery _ aDuration .
 	lastRun _ nil. 
 	isActive _ true.
 	name _ aString.
-	initTime _ DateAndTime now.
+	initTime _ DateAndTimeHelper dateNow.
 	^ self ! !
 
-!CronUnitEvery methodsFor: 'running' stamp: 'NM 9/22/2021 10:54:13'!
+!CronUnitEvery methodsFor: 'running' stamp: 'NM 11/10/2021 16:30:57'!
 isTimeToRun
 	". datermine if it is time for this unit to be run, return a boolean. "
 	|now|
 	"never runned units are always ready for a first  run."
 	(lastRun isNil) ifTrue: [  ^ true ].  
-	now _ DateAndTime now.
+	"now _ DateAndTime now."
+	now _ DateAndTimeHelper dateNow.
 	((now - lastRun) >= runEvery) ifTrue: [ ^ true ].
 	^ false 
 	! !
 
-!CronUnitEvery methodsFor: 'running' stamp: 'NM 9/22/2021 10:59:04'!
+!CronUnitEvery methodsFor: 'running' stamp: 'NM 11/10/2021 16:31:12'!
 tryToRun
 	". run this unit if its time has come and it is active"
 	((self isActive) and: [self isTimeToRun]) ifTrue: [  
 		action value. 
-		lastRun _ DateAndTime now.
+		lastRun _ DateAndTimeHelper dateNow.
 		] .
 	
 	 ! !
@@ -467,16 +485,16 @@ new: aDuration name: aString do: aBlock
 	"self assert: [ CronDaemon isValidUnitName: aString ] description: 'Errore, cron unit con questo nome in uso' ."
 	^ self basicNew initialize: aDuration name: aString do: aBlock! !
 
-!CronUnitOn methodsFor: 'running' stamp: 'NM 10/14/2021 16:17:29'!
+!CronUnitOn methodsFor: 'running' stamp: 'NM 11/10/2021 16:31:53'!
 tryToRun
 	". run this unit if its time has come and it is active"
 	((self isActive) and: [self isTimeToRun]) ifTrue: [  
 		action value. 
-		lastRun _ DateAndTime now.
+		lastRun _ DateAndTimeHelper dateNow.
 		] .
 	! !
 
-!CronUnitOn methodsFor: 'initialization' stamp: 'NM 10/14/2021 16:31:19'!
+!CronUnitOn methodsFor: 'initialization' stamp: 'NM 11/10/2021 16:32:10'!
 initializeOn: aBlockTest name: aStringName do: aBlockAction
 	action _ aBlockAction.
 	runOn _ aBlockTest .
@@ -484,10 +502,10 @@ initializeOn: aBlockTest name: aStringName do: aBlockAction
 	lastRun _ nil. 
 	isActive _ true.
 	name _ aStringName.
-	initTime _ DateAndTime now.
+	initTime _ DateAndTimeHelper dateNow.
 	^ self ! !
 
-!CronUnitOn methodsFor: 'initialization' stamp: 'NM 10/14/2021 16:33:24'!
+!CronUnitOn methodsFor: 'initialization' stamp: 'NM 11/10/2021 16:31:38'!
 isTimeToRun
 	". datermine if it is time for this unit to be run, return a boolean. "
 	|now |
@@ -497,7 +515,8 @@ isTimeToRun
 	].  
 	" . se la unit ha girato almeno una volta " 
 	" . se il tempo dalla ultima volta che ha girato e' < 2*delta allora non e' ora di considerarla "
-	now _ DateAndTime now.
+	"now _ DateAndTime now. "
+	now _ DateAndTimeHelper dateNow.
 	((now - lastRun) < (delta * 2)) ifTrue: [ ^ false ]  ifFalse: [
 		^ runOn value. 
 		].
@@ -507,3 +526,15 @@ isTimeToRun
 newOn: aBlockTest name: aStringName do: aBlockAction
 	". Example of aStringTime: '15:26'  ' "
 	^ self basicNew initializeOn: aBlockTest name: aStringName  do: aBlockAction . ! !
+
+!DateAndTimeHelper class methodsFor: 'as yet unclassified' stamp: 'NM 11/10/2021 16:28:09'!
+dateNow
+	". by default should use `DateAndTime now` "
+	" ^ DateAndTime now "
+	^ LinuxShell date! !
+
+!DateAndTimeHelper class methodsFor: 'as yet unclassified' stamp: 'NM 11/10/2021 16:27:15'!
+timeNow
+	". by default should use `Time now` "
+	" ^ Time now "
+	^ LinuxShell time ! !
